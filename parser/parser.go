@@ -701,7 +701,7 @@ func (p *parser) primary() Expr {
 		return &RegExpr{regex}
 	case DOLLAR:
 		p.next()
-		return &FieldExpr{p.primary()}
+		return &FieldExpr{p.postIncr()}
 	case NOT, ADD, SUB:
 		op := p.tok
 		p.next()
