@@ -1,15 +1,16 @@
+// NOTE: very hacky right now, just a quick speed test
+
 package interp
 
 type array struct {
-	// items []arrayItem // hash buckets, linearly probed
-	// len  int           // number of active items in items slice
-	m map[string]value
+	items []arrayItem // hash buckets, linearly probed
+	len  int           // number of active items in items slice
 }
 
-// type arrayItem struct {
-//     key string
-//     val value
-// }
+type arrayItem struct {
+    key string
+    val value
+}
 
 type arrayIter struct {
 	keys []string
@@ -21,7 +22,7 @@ const (
 	offset64 = 14695981039346656037
 	prime64  = 1099511628211
 
-	arrayDefaultSize = 32
+	arrayDefaultSize = 64
 )
 
 func newArray() *array {
@@ -32,54 +33,127 @@ func newArraySize(initialSize int) *array {
 	if initialSize < arrayDefaultSize {
 		initialSize = arrayDefaultSize
 	}
-	return &array{m: make(map[string]value, initialSize)}
-	// return &array{
-	// 	items: make([]arrayItem, initialSize),
-	// }
+	return &array{
+		items: make([]arrayItem, initialSize), // TODO: should this be 2*initialSize
+	}
 }
 
 func (a *array) Len() int {
-	return len(a.m)
+	return a.len
 }
 
 func (a *array) Contains(key string) bool {
-	_, ok := a.m[key]
-	return ok
+	v := a.Get(key)
+	return v != null() // TODO: hmmm, probably need a real "contains"
 }
 
 func (a *array) Get(key string) value {
-	return a.m[key]
+    // Like hash/fnv New64, Write, Sum64 -- but inlined without extra code.
+    hash := uint64(offset64)
+    for i := 0; i < len(key); i++ {
+        hash *= prime64
+        hash ^= uint64(key[i])
+    }
+
+    // Make 64-bit hash in range for items slice.
+    index := int(hash & uint64(len(a.items)-1))
+
+    for {
+    	item := a.items[index]
+        if item.key == key {
+			// Found matching slot, return value.
+			return item.val
+        }
+        if item.val == null() {
+            // Found empty slot, key not present.
+            return null()
+        }
+        // Slot already holds another key, try next slot (linear probe).
+        index++
+        if index >= len(a.items) {
+            index = 0
+        }
+    }
 }
 
 func (a *array) GetOrCreate(key string) value {
 	// Strangely, per the POSIX spec, "Any other reference to a
 	// nonexistent array element [apart from "in" expressions]
 	// shall automatically create it."
-	v, ok := a.m[key]
-	if !ok {
-		a.m[key] = v
+	v := a.Get(key)
+	if v == null() {
+		a.Set(key, v)
 	}
 	return v
 }
 
 func (a *array) Set(key string, val value) {
-	a.m[key] = val
+    // Like hash/fnv New64, Write, Sum64 -- but inlined without extra code.
+    hash := uint64(offset64)
+    for i := 0; i < len(key); i++ {
+        hash *= prime64
+        hash ^= uint64(key[i])
+    }
+
+    // Make 64-bit hash in range for items slice.
+    index := int(hash & uint64(len(a.items)-1))
+
+    // If current items more than half full, double length and reinsert items.
+    if a.len >= len(a.items)/2 {
+        newSize := len(a.items) * 2
+        if newSize == 0 {
+            newSize = arrayDefaultSize
+        }
+        newA := array{items: make([]arrayItem, newSize)}
+        for _, item := range a.items {
+            if item.val != null() {
+                newA.Set(item.key, item.val)
+            }
+        }
+        a.items = newA.items
+        index = int(hash & uint64(len(a.items)-1))
+    }
+
+    // Look up key, using direct match and linear probing if not found.
+    for {
+    	item := a.items[index]
+        if item.val == null() {
+            // Found empty slot, add new item.
+            a.items[index] = arrayItem{key: key, val: val}
+            a.len++
+			// fmt.Println("inserted", a.items)
+            return
+        }
+        if item.key == key {
+        	// Found this key, update item
+            a.items[index] = arrayItem{key: key, val: val}
+			// fmt.Println("updated", a.items)
+            return
+        }
+        // Slot already holds a key, try next slot (linear probe).
+        index++
+        if index >= len(a.items) {
+            index = 0
+        }
+    }
 }
 
 func (a *array) Delete(key string) {
-	delete(a.m, key)
+	// TODO
 }
 
 func (a *array) DeleteAll() {
-	for k := range a.m {
-		delete(a.m, k)
-	}
+	a.items = make([]arrayItem, arrayDefaultSize)
+	a.len = 0
 }
 
 func (a *array) Iterator() *arrayIter {
-	keys := make([]string, 0, len(a.m))
-	for k := range a.m {
-		keys = append(keys, k)
+	// TODO: avoid keys slice, point directly into items
+	keys := make([]string, 0, a.len)
+	for _, item := range a.items {
+		if item.val != null() {
+			keys = append(keys, item.key)
+		}
 	}
 	return &arrayIter{keys: keys, i: -1}
 }
@@ -92,66 +166,3 @@ func (it *arrayIter) Next() bool {
 func (it *arrayIter) Key() string {
 	return it.keys[it.i]
 }
-
-/*
-func (c *Counter) Inc(key []byte, n int) {
-    // Like hash/fnv New64, Write, Sum64 -- but inlined without extra code.
-    hash := uint64(offset64)
-    for _, c := range key {
-        hash *= prime64
-        hash ^= uint64(c)
-    }
-
-    // Make 64-bit hash in range for items slice.
-    index := int(hash & uint64(len(c.items)-1))
-
-    // If current items more than half full, double length and reinsert items.
-    if c.size >= len(c.items)/2 {
-        newLen := len(c.items) * 2
-        if newLen == 0 {
-            newLen = initialLen
-        }
-        newC := Counter{items: make([]CounterItem, newLen)}
-        for _, item := range c.items {
-            if item.Key != nil {
-                newC.Inc(item.Key, item.Count)
-            }
-        }
-        c.items = newC.items
-        index = int(hash & uint64(len(c.items)-1))
-    }
-
-    // Look up key, using direct match and linear probing if not found.
-    for {
-        if c.items[index].Key == nil {
-            // Found empty slot, add new item (copying key).
-            keyCopy := make([]byte, len(key))
-            copy(keyCopy, key)
-            c.items[index] = CounterItem{keyCopy, n}
-            c.size++
-            return
-        }
-        if bytes.Equal(c.items[index].Key, key) {
-            // Found matching slot, increment existing count.
-            c.items[index].Count += n
-            return
-        }
-        // Slot already holds another key, try next slot (linear probe).
-        index++
-        if index >= len(c.items) {
-            index = 0
-        }
-    }
-}
-
-// Items returns a copy of the incremented items.
-func (c *Counter) Items() []CounterItem {
-    var items []CounterItem
-    for _, item := range c.items {
-        if item.Key != nil {
-            items = append(items, item)
-        }
-    }
-    return items
-}
-*/
