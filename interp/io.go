@@ -363,7 +363,7 @@ func (p *interp) nextLine() (string, error) {
 				index := strconv.Itoa(p.filenameIndex)
 				argvIndex := p.program.Arrays["ARGV"]
 				argvArray := p.arrays[p.getArrayIndex(ScopeGlobal, argvIndex)]
-				filename := p.toString(argvArray[index])
+				filename := p.toString(argvArray.Get(index))
 				p.filenameIndex++
 
 				// Is it actually a var=value assignment?

@@ -302,7 +302,7 @@ func (p *interp) callUser(index int, args []Expr) (value, error) {
 	for i := len(args); i < len(f.Params); i++ {
 		if f.Arrays[i] {
 			arrays = append(arrays, len(p.arrays))
-			p.arrays = append(p.arrays, make(map[string]value))
+			p.arrays = append(p.arrays, newArray())
 		} else {
 			p.stack = append(p.stack, null())
 		}
@@ -575,12 +575,12 @@ func (p *interp) split(s string, scope VarScope, index int, fs string) (int, err
 		}
 		parts = re.Split(s, -1)
 	}
-	array := make(map[string]value, len(parts))
+	array := newArraySize(len(parts))
 	for i, part := range parts {
-		array[strconv.Itoa(i+1)] = numStr(part)
+		array.Set(strconv.Itoa(i+1), numStr(part))
 	}
 	p.arrays[p.getArrayIndex(scope, index)] = array
-	return len(array), nil
+	return array.Len(), nil
 }
 
 // Guts of the sub() and gsub() functions

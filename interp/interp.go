@@ -82,7 +82,7 @@ type interp struct {
 	globals     []value
 	stack       []value
 	frame       []value
-	arrays      []map[string]value
+	arrays      []*array
 	localArrays [][]int
 	callDepth   int
 	nativeFuncs []nativeFunc
@@ -220,9 +220,9 @@ func ExecProgram(program *Program, config *Config) (int, error) {
 	// Allocate memory for variables
 	p.globals = make([]value, len(program.Scalars))
 	p.stack = make([]value, 0, initialStackSize)
-	p.arrays = make([]map[string]value, len(program.Arrays), len(program.Arrays)+initialStackSize)
+	p.arrays = make([]*array, len(program.Arrays), len(program.Arrays)+initialStackSize)
 	for i := 0; i < len(program.Arrays); i++ {
-		p.arrays[i] = make(map[string]value)
+		p.arrays[i] = newArray()
 	}
 
 	// Initialize defaults
@@ -551,8 +551,9 @@ func (p *interp) execute(stmt Stmt) error {
 	case *ForInStmt:
 		// Foreach-style "for (key in array)" loop
 		array := p.arrays[p.getArrayIndex(s.Array.Scope, s.Array.Index)]
-		for index := range array {
-			err := p.setVar(s.Var.Scope, s.Var.Index, str(index))
+		it := array.Iterator()
+		for it.Next() {
+			err := p.setVar(s.Var.Scope, s.Var.Index, str(it.Key()))
 			if err != nil {
 				return err
 			}
@@ -644,20 +645,17 @@ func (p *interp) execute(stmt Stmt) error {
 		return errExit
 
 	case *DeleteStmt:
+		array := p.arrays[p.getArrayIndex(s.Array.Scope, s.Array.Index)]
 		if len(s.Index) > 0 {
 			// Delete single key from array
 			index, err := p.evalIndex(s.Index)
 			if err != nil {
 				return err
 			}
-			array := p.arrays[p.getArrayIndex(s.Array.Scope, s.Array.Index)]
-			delete(array, index) // Does nothing if key isn't present
+			array.Delete(index)
 		} else {
 			// Delete entire array
-			array := p.arrays[p.getArrayIndex(s.Array.Scope, s.Array.Index)]
-			for k := range array {
-				delete(array, k)
-			}
+			array.DeleteAll()
 		}
 
 	case *BlockStmt:
@@ -838,8 +836,7 @@ func (p *interp) eval(expr Expr) (value, error) {
 			return null(), err
 		}
 		array := p.arrays[p.getArrayIndex(e.Array.Scope, e.Array.Index)]
-		_, ok := array[index]
-		return boolean(ok), nil
+		return boolean(array.Contains(index)), nil
 
 	case *UserCallExpr:
 		// Call user-defined or native Go function
@@ -1103,20 +1100,14 @@ func (p *interp) getArrayIndex(scope VarScope, index int) int {
 func (p *interp) getArrayValue(scope VarScope, arrayIndex int, index string) value {
 	resolved := p.getArrayIndex(scope, arrayIndex)
 	array := p.arrays[resolved]
-	v, ok := array[index]
-	if !ok {
-		// Strangely, per the POSIX spec, "Any other reference to a
-		// nonexistent array element [apart from "in" expressions]
-		// shall automatically create it."
-		array[index] = v
-	}
-	return v
+	return array.GetOrCreate(index)
 }
 
 // Set a value in given array by key (index)
 func (p *interp) setArrayValue(scope VarScope, arrayIndex int, index string, v value) {
 	resolved := p.getArrayIndex(scope, arrayIndex)
-	p.arrays[resolved][index] = v
+	array := p.arrays[resolved]
+	array.Set(index, v)
 }
 
 // Get the value of given numbered field, equivalent to "$index"
