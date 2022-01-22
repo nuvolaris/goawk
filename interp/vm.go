@@ -15,6 +15,9 @@ import (
 )
 
 func (p *interp) execute(compiled *compiler.Program, code []compiler.Opcode) error {
+	stack := make([]value, 100)
+	sp := 0
+
 	for i := 0; i < len(code); {
 		op := code[i]
 		i++
@@ -23,7 +26,11 @@ func (p *interp) execute(compiled *compiler.Program, code []compiler.Opcode) err
 		case compiler.Num:
 			index := code[i]
 			i++
-			p.push(num(compiled.Nums[index]))
+			if sp >= len(stack) {
+				stack = append(stack, null())
+			}
+			stack[sp] = num(compiled.Nums[index])
+			sp++
 
 		case compiler.Str:
 			index := code[i]
@@ -61,7 +68,11 @@ func (p *interp) execute(compiled *compiler.Program, code []compiler.Opcode) err
 		case compiler.Global:
 			index := code[i]
 			i++
-			p.push(p.globals[index])
+			if sp >= len(stack) {
+				stack = append(stack, null())
+			}
+			stack[sp] = p.globals[index]
+			sp++
 
 		case compiler.Local:
 			index := code[i]
@@ -246,7 +257,8 @@ func (p *interp) execute(compiled *compiler.Program, code []compiler.Opcode) err
 			operation := lexer.Token(code[i])
 			index := code[i+1]
 			i += 2
-			v, err := p.evalBinary(operation, p.globals[index], p.pop())
+			v, err := p.evalBinary(operation, p.globals[index], stack[sp-1])
+			sp--
 			if err != nil {
 				return err
 			}
@@ -318,8 +330,9 @@ func (p *interp) execute(compiled *compiler.Program, code []compiler.Opcode) err
 			p.push(str(strings.Join(indices, p.subscriptSep)))
 
 		case compiler.Add:
-			l, r := p.peekPop()
-			p.replaceTop(num(l.num() + r.num()))
+			l, r := stack[sp-2], stack[sp-1]
+			sp--
+			stack[sp-1] = num(l.num() + r.num())
 
 		case compiler.Subtract:
 			l, r := p.peekPop()
@@ -501,7 +514,8 @@ func (p *interp) execute(compiled *compiler.Program, code []compiler.Opcode) err
 
 		case compiler.JumpLess:
 			offset := code[i]
-			l, r := p.popTwo()
+			l, r := stack[sp-2], stack[sp-1]
+			sp -= 2
 			ln, lIsStr := l.isTrueStr()
 			rn, rIsStr := r.isTrueStr()
 			var b bool
@@ -552,7 +566,8 @@ func (p *interp) execute(compiled *compiler.Program, code []compiler.Opcode) err
 
 		case compiler.JumpGreaterOrEqual:
 			offset := code[i]
-			l, r := p.popTwo()
+			l, r := stack[sp-2], stack[sp-1]
+			sp -= 2
 			ln, lIsStr := l.isTrueStr()
 			rn, rIsStr := r.isTrueStr()
 			var b bool
