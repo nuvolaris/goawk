@@ -11,11 +11,12 @@ import sys
 import time
 
 AWKS = [
-    './goawk',
+    './funcs',
+    './switch',
     './orig', # GoAWK without perf improvements (commit 8ab5446)
     'original-awk',
-    'gawk',
-    'mawk',
+    # 'gawk',
+    # 'mawk',
 ]
 NORM_INDEX = AWKS.index('original-awk')
 # Only get the mean of these tests because these are the only ones
