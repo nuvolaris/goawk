@@ -306,7 +306,7 @@ func (p *interp) execute(code []compiler.Opcode) error {
 			index := code[ip]
 			ip++
 			re := p.regexes[index]
-			p.push(boolean(re.MatchString(p.line)))
+			p.push(boolean(re.IsMatch(p.line)))
 
 		case compiler.MultiIndex:
 			numValues := int(code[ip])
@@ -420,7 +420,7 @@ func (p *interp) execute(code []compiler.Opcode) error {
 			if err != nil {
 				return err
 			}
-			matched := re.MatchString(p.toString(l))
+			matched := re.IsMatch(p.toString(l))
 			p.replaceTop(boolean(matched))
 
 		case compiler.NotMatch:
@@ -429,7 +429,7 @@ func (p *interp) execute(code []compiler.Opcode) error {
 			if err != nil {
 				return err
 			}
-			matched := re.MatchString(p.toString(l))
+			matched := re.IsMatch(p.toString(l))
 			p.replaceTop(boolean(!matched))
 
 		case compiler.Not:
@@ -965,14 +965,15 @@ func (p *interp) callBuiltin(builtinOp compiler.BuiltinOp) error {
 		if err != nil {
 			return err
 		}
-		loc := re.FindStringIndex(s)
-		if loc == nil {
+		start, end, ok := re.Find(s)
+		//loc := re.FindStringIndex(s)
+		if !ok {
 			p.matchStart = 0
 			p.matchLength = -1
 			p.replaceTop(num(0))
 		} else {
-			p.matchStart = loc[0] + 1
-			p.matchLength = loc[1] - loc[0]
+			p.matchStart = start + 1
+			p.matchLength = end - start
 			p.replaceTop(num(float64(p.matchStart)))
 		}
 

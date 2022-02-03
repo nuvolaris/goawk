@@ -26,7 +26,7 @@ function addword(w) {
 
 function printline() {
     if (length(line) > 0) {
-        sub(/ +$/, "", line)
+#        sub(/ +$/, "", line)
         print substr(line, 2)   # removes leading blank
         line = ""
     }

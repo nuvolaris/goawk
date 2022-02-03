@@ -6,11 +6,11 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"github.com/BurntSushi/rure-go"
 	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"regexp"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -300,7 +300,7 @@ func (s byteSplitter) scan(data []byte, atEOF bool) (advance int, token []byte, 
 
 // Splitter that splits records on the given regular expression
 type regexSplitter struct {
-	re         *regexp.Regexp
+	re         *rure.Regex
 	terminator *string
 }
 
@@ -308,12 +308,14 @@ func (s regexSplitter) scan(data []byte, atEOF bool) (advance int, token []byte,
 	if atEOF && len(data) == 0 {
 		return 0, nil, nil
 	}
-	loc := s.re.FindIndex(data)
+	start, end, ok := s.re.FindBytes(data)
+	//loc := s.re.FindIndex(data)
 	// Note: for a regex such as "()", loc[0]==loc[1]. Gawk behavior for this
 	// case is to match the entire input.
-	if loc != nil && loc[0] != loc[1] {
-		*s.terminator = string(data[loc[0]:loc[1]]) // set RT special variable
-		return loc[1], data[:loc[0]], nil
+	if ok && start != end {
+		//if loc != nil && loc[0] != loc[1] {
+		*s.terminator = string(data[start:end]) // set RT special variable
+		return end, data[:start], nil
 	}
 	// If at EOF, we have a final, non-terminated record; return it
 	if atEOF {
@@ -357,7 +359,8 @@ func (p *interp) ensureFields() {
 		p.fields = strings.Split(p.line, p.fieldSep)
 	default:
 		// Split on FS as a regex
-		p.fields = p.fieldSepRegex.Split(p.line, -1)
+		panic("TODO regex FS not yet supported")
+		//p.fields = p.fieldSepRegex.Split(p.line, -1)
 	}
 
 	// Special case for when RS=="" and FS is single character,

@@ -251,11 +251,12 @@ func (p *interp) split(s string, scope ast.VarScope, index int, fs string) (int,
 	} else if utf8.RuneCountInString(fs) <= 1 {
 		parts = strings.Split(s, fs)
 	} else {
-		re, err := p.compileRegex(fs)
+		_, err := p.compileRegex(fs)
 		if err != nil {
 			return 0, err
 		}
-		parts = re.Split(s, -1)
+		panic("TODO split with regex not yet supported")
+		//parts = re.Split(s, -1)
 	}
 	array := make(map[string]value, len(parts))
 	for i, part := range parts {
@@ -267,44 +268,45 @@ func (p *interp) split(s string, scope ast.VarScope, index int, fs string) (int,
 
 // Guts of the sub() and gsub() functions
 func (p *interp) sub(regex, repl, in string, global bool) (out string, num int, err error) {
-	re, err := p.compileRegex(regex)
-	if err != nil {
-		return "", 0, err
-	}
-	count := 0
-	out = re.ReplaceAllStringFunc(in, func(s string) string {
-		// Only do the first replacement for sub(), or all for gsub()
-		if !global && count > 0 {
-			return s
+	panic("sub not yet supported")
+	/*	re, err := p.compileRegex(regex)
+		if err != nil {
+			return "", 0, err
 		}
-		count++
-		// Handle & (ampersand) properly in replacement string
-		r := make([]byte, 0, 64) // Up to 64 byte replacement won't require heap allocation
-		for i := 0; i < len(repl); i++ {
-			switch repl[i] {
-			case '&':
-				r = append(r, s...)
-			case '\\':
-				i++
-				if i < len(repl) {
-					switch repl[i] {
-					case '&':
-						r = append(r, '&')
-					case '\\':
-						r = append(r, '\\')
-					default:
-						r = append(r, '\\', repl[i])
-					}
-				} else {
-					r = append(r, '\\')
-				}
-			default:
-				r = append(r, repl[i])
+		count := 0
+		out = re.ReplaceAllStringFunc(in, func(s string) string {
+			// Only do the first replacement for sub(), or all for gsub()
+			if !global && count > 0 {
+				return s
 			}
-		}
-		return string(r)
-	})
-	return out, count, nil
+			count++
+			// Handle & (ampersand) properly in replacement string
+			r := make([]byte, 0, 64) // Up to 64 byte replacement won't require heap allocation
+			for i := 0; i < len(repl); i++ {
+				switch repl[i] {
+				case '&':
+					r = append(r, s...)
+				case '\\':
+					i++
+					if i < len(repl) {
+						switch repl[i] {
+						case '&':
+							r = append(r, '&')
+						case '\\':
+							r = append(r, '\\')
+						default:
+							r = append(r, '\\', repl[i])
+						}
+					} else {
+						r = append(r, '\\')
+					}
+				default:
+					r = append(r, repl[i])
+				}
+			}
+			return string(r)
+		})
+		return out, count, nil*/
 }
 
 type cachedFormat struct {

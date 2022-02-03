@@ -23,6 +23,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/BurntSushi/rure-go"
+
 	"github.com/benhoyt/goawk/internal/ast"
 	"github.com/benhoyt/goawk/internal/compiler"
 	"github.com/benhoyt/goawk/parser"
@@ -103,9 +105,9 @@ type interp struct {
 	convertFormat    string
 	outputFormat     string
 	fieldSep         string
-	fieldSepRegex    *regexp.Regexp
+	fieldSepRegex    *rure.Regex
 	recordSep        string
-	recordSepRegex   *regexp.Regexp
+	recordSepRegex   *rure.Regex
 	recordTerminator string
 	outputFieldSep   string
 	outputRecordSep  string
@@ -118,13 +120,13 @@ type interp struct {
 	functions []compiler.Function
 	nums      []float64
 	strs      []string
-	regexes   []*regexp.Regexp
+	regexes   []*rure.Regex
 
 	// Misc pieces of state
 	random      *rand.Rand
 	randSeed    float64
 	exitStatus  int
-	regexCache  map[string]*regexp.Regexp
+	regexCache  map[string]*rure.Regex
 	formatCache map[string]cachedFormat
 }
 
@@ -228,7 +230,11 @@ func ExecProgram(program *parser.Program, config *Config) (int, error) {
 		functions: program.Compiled.Functions,
 		nums:      program.Compiled.Nums,
 		strs:      program.Compiled.Strs,
-		regexes:   program.Compiled.Regexes,
+	}
+
+	p.regexes = make([]*rure.Regex, len(program.Compiled.Regexes))
+	for i, re := range program.Compiled.Regexes {
+		p.regexes[i] = rure.MustCompile(re.String())
 	}
 
 	// Allocate memory for variables and virtual machine stack
@@ -240,7 +246,7 @@ func ExecProgram(program *parser.Program, config *Config) (int, error) {
 	}
 
 	// Initialize defaults
-	p.regexCache = make(map[string]*regexp.Regexp, 10)
+	p.regexCache = make(map[string]*rure.Regex, 10)
 	p.formatCache = make(map[string]cachedFormat, 10)
 	p.randSeed = 1.0
 	seed := math.Float64bits(p.randSeed)
@@ -530,7 +536,7 @@ func (p *interp) setSpecial(index int, v value) error {
 	case ast.V_FS:
 		p.fieldSep = p.toString(v)
 		if utf8.RuneCountInString(p.fieldSep) > 1 { // compare to interp.ensureFields
-			re, err := regexp.Compile(p.fieldSep)
+			re, err := rure.Compile(p.fieldSep)
 			if err != nil {
 				return newError("invalid regex %q: %s", p.fieldSep, err)
 			}
@@ -550,9 +556,9 @@ func (p *interp) setSpecial(index int, v value) error {
 		case utf8.RuneCountInString(p.recordSep) == 1:
 			// Multi-byte unicode char falls back to regex splitter
 			sep := regexp.QuoteMeta(p.recordSep) // not strictly necessary as no multi-byte chars are regex meta chars
-			p.recordSepRegex = regexp.MustCompile(sep)
+			p.recordSepRegex = rure.MustCompile(sep)
 		default:
-			re, err := regexp.Compile(p.recordSep)
+			re, err := rure.Compile(p.recordSep)
 			if err != nil {
 				return newError("invalid regex %q: %s", p.recordSep, err)
 			}
@@ -650,11 +656,11 @@ func (p *interp) toString(v value) string {
 }
 
 // Compile regex string (or fetch from regex cache)
-func (p *interp) compileRegex(regex string) (*regexp.Regexp, error) {
+func (p *interp) compileRegex(regex string) (*rure.Regex, error) {
 	if re, ok := p.regexCache[regex]; ok {
 		return re, nil
 	}
-	re, err := regexp.Compile(regex)
+	re, err := rure.Compile(regex)
 	if err != nil {
 		return nil, newError("invalid regex %q: %s", regex, err)
 	}
