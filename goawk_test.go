@@ -1,6 +1,6 @@
 // GoAWK tests
 
-package main_test
+package goawk_test
 
 import (
 	"bufio"

@@ -24,7 +24,7 @@
 //
 // To use GoAWK in your Go programs, see README.md or the "interp"
 // package docs.
-package main
+package goawk
 
 import (
 	"bytes"
