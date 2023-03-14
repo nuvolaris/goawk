@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	. "github.com/benhoyt/goawk/lexer"
+	. "github.com/nuvolaris/goawk/lexer"
 )
 
 // Program is an entire AWK program.

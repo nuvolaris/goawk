@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/benhoyt/goawk/interp"
-	"github.com/benhoyt/goawk/parser"
+	"github.com/nuvolaris/goawk/interp"
+	"github.com/nuvolaris/goawk/parser"
 )
 
 // This definitely doesn't test that everything was reset, but it's a good start.

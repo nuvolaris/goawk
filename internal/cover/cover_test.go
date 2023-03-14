@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/benhoyt/goawk/internal/parseutil"
-	"github.com/benhoyt/goawk/parser"
+	"github.com/nuvolaris/goawk/internal/parseutil"
+	"github.com/nuvolaris/goawk/parser"
 )
 
 func TestAnnotatingLogicCorrectness(t *testing.T) {

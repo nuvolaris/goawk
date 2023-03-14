@@ -11,10 +11,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/benhoyt/goawk/internal/ast"
-	"github.com/benhoyt/goawk/internal/compiler"
-	"github.com/benhoyt/goawk/internal/resolver"
-	. "github.com/benhoyt/goawk/lexer"
+	"github.com/nuvolaris/goawk/internal/ast"
+	"github.com/nuvolaris/goawk/internal/compiler"
+	"github.com/nuvolaris/goawk/internal/resolver"
+	. "github.com/nuvolaris/goawk/lexer"
 )
 
 // ParseError (actually *ParseError) is the type of error returned by

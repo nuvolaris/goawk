@@ -7,8 +7,8 @@ import (
 	"regexp"
 	"strconv"
 
-	"github.com/benhoyt/goawk/internal/ast"
-	"github.com/benhoyt/goawk/lexer"
+	"github.com/nuvolaris/goawk/internal/ast"
+	"github.com/nuvolaris/goawk/lexer"
 )
 
 // Program holds an entire compiled program.

@@ -1,7 +1,7 @@
 package parseutil_test
 
 import (
-	. "github.com/benhoyt/goawk/internal/parseutil"
+	. "github.com/nuvolaris/goawk/internal/parseutil"
 	"strings"
 	"testing"
 )

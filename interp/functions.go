@@ -12,8 +12,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/benhoyt/goawk/internal/ast"
-	. "github.com/benhoyt/goawk/lexer"
+	"github.com/nuvolaris/goawk/internal/ast"
+	. "github.com/nuvolaris/goawk/lexer"
 )
 
 // Call native-defined function with given name and arguments, return

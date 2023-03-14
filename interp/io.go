@@ -17,8 +17,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/benhoyt/goawk/internal/ast"
-	. "github.com/benhoyt/goawk/lexer"
+	"github.com/nuvolaris/goawk/internal/ast"
+	. "github.com/nuvolaris/goawk/lexer"
 )
 
 // Print a line of output followed by a newline

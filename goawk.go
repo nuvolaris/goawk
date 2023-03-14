@@ -37,13 +37,13 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/benhoyt/goawk/internal/compiler"
-	"github.com/benhoyt/goawk/internal/cover"
-	"github.com/benhoyt/goawk/internal/parseutil"
-	"github.com/benhoyt/goawk/internal/resolver"
-	"github.com/benhoyt/goawk/interp"
-	"github.com/benhoyt/goawk/lexer"
-	"github.com/benhoyt/goawk/parser"
+	"github.com/nuvolaris/goawk/internal/compiler"
+	"github.com/nuvolaris/goawk/internal/cover"
+	"github.com/nuvolaris/goawk/internal/parseutil"
+	"github.com/nuvolaris/goawk/internal/resolver"
+	"github.com/nuvolaris/goawk/interp"
+	"github.com/nuvolaris/goawk/lexer"
+	"github.com/nuvolaris/goawk/parser"
 )
 
 const (
@@ -77,7 +77,7 @@ GoAWK debugging arguments:
 `
 )
 
-func main() {
+func AwkMain() {
 	// Parse command line arguments manually rather than using the
 	// "flag" package, so we can support flags with no space between
 	// flag and argument, like '-F:' (allowed by POSIX)

@@ -28,9 +28,9 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/benhoyt/goawk/internal/ast"
-	"github.com/benhoyt/goawk/internal/compiler"
-	"github.com/benhoyt/goawk/parser"
+	"github.com/nuvolaris/goawk/internal/ast"
+	"github.com/nuvolaris/goawk/internal/compiler"
+	"github.com/nuvolaris/goawk/parser"
 )
 
 var (

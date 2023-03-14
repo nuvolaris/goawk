@@ -6,8 +6,8 @@ import (
 	"context"
 	"math"
 
-	"github.com/benhoyt/goawk/internal/ast"
-	"github.com/benhoyt/goawk/parser"
+	"github.com/nuvolaris/goawk/internal/ast"
+	"github.com/nuvolaris/goawk/parser"
 )
 
 const checkContextOps = 1000 // for efficiency, only check context every N instructions

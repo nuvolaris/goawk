@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/benhoyt/goawk/internal/ast"
-	"github.com/benhoyt/goawk/parser"
+	"github.com/nuvolaris/goawk/internal/ast"
+	"github.com/nuvolaris/goawk/parser"
 )
 
 // NOTE: apart from TestParseAndString, the parser doesn't have
