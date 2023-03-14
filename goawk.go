@@ -77,7 +77,7 @@ GoAWK debugging arguments:
 `
 )
 
-func AwkMain() {
+func AwkMain() error {
 	// Parse command line arguments manually rather than using the
 	// "flag" package, so we can support flags with no space between
 	// flag and argument, like '-F:' (allowed by POSIX)
@@ -113,13 +113,13 @@ argsLoop:
 		switch arg {
 		case "-covermode":
 			if i+1 >= len(os.Args) {
-				errorExitf("flag needs an argument: -covermode")
+				return errorExitf("flag needs an argument: -covermode")
 			}
 			i++
 			coverMode = coverModeFromString(os.Args[i])
 		case "-coverprofile":
 			if i+1 >= len(os.Args) {
-				errorExitf("flag needs an argument: -coverprofile")
+				return errorExitf("flag needs an argument: -coverprofile")
 			}
 			i++
 			coverProfile = os.Args[i]
@@ -127,7 +127,7 @@ argsLoop:
 			coverAppend = true
 		case "-E":
 			if i+1 >= len(os.Args) {
-				errorExitf("flag needs an argument: -E")
+				return errorExitf("flag needs an argument: -E")
 			}
 			i++
 			progFiles = append(progFiles, os.Args[i])
@@ -136,25 +136,25 @@ argsLoop:
 			break argsLoop
 		case "-F":
 			if i+1 >= len(os.Args) {
-				errorExitf("flag needs an argument: -F")
+				return errorExitf("flag needs an argument: -F")
 			}
 			i++
 			fieldSep = os.Args[i]
 		case "-f":
 			if i+1 >= len(os.Args) {
-				errorExitf("flag needs an argument: -f")
+				return errorExitf("flag needs an argument: -f")
 			}
 			i++
 			progFiles = append(progFiles, os.Args[i])
 		case "-v":
 			if i+1 >= len(os.Args) {
-				errorExitf("flag needs an argument: -v")
+				return errorExitf("flag needs an argument: -v")
 			}
 			i++
 			vars = append(vars, os.Args[i])
 		case "-cpuprofile":
 			if i+1 >= len(os.Args) {
-				errorExitf("flag needs an argument: -cpuprofile")
+				return errorExitf("flag needs an argument: -cpuprofile")
 			}
 			i++
 			cpuProfile = os.Args[i]
@@ -168,28 +168,28 @@ argsLoop:
 			header = true
 		case "-h", "--help":
 			fmt.Printf("%s\n\n%s\n\n%s", copyright, shortUsage, longUsage)
-			os.Exit(0)
+			return nil
 		case "-i":
 			if i+1 >= len(os.Args) {
-				errorExitf("flag needs an argument: -i")
+				return errorExitf("flag needs an argument: -i")
 			}
 			i++
 			inputMode = os.Args[i]
 		case "-memprofile":
 			if i+1 >= len(os.Args) {
-				errorExitf("flag needs an argument: -memprofile")
+				return errorExitf("flag needs an argument: -memprofile")
 			}
 			i++
 			memProfile = os.Args[i]
 		case "-o":
 			if i+1 >= len(os.Args) {
-				errorExitf("flag needs an argument: -o")
+				return errorExitf("flag needs an argument: -o")
 			}
 			i++
 			outputMode = os.Args[i]
 		case "-version", "--version":
 			fmt.Println(version)
-			os.Exit(0)
+			return nil
 		default:
 			switch {
 			case strings.HasPrefix(arg, "-E"):
@@ -216,7 +216,7 @@ argsLoop:
 			case strings.HasPrefix(arg, "-coverprofile="):
 				coverProfile = arg[len("-coverprofile="):]
 			default:
-				errorExitf("flag provided but not defined: %s", arg)
+				return errorExitf("flag provided but not defined: %s", arg)
 			}
 		}
 	}
@@ -235,28 +235,28 @@ argsLoop:
 			if progFile == "-" {
 				err := fileReader.AddFile("<stdin>", os.Stdin)
 				if err != nil {
-					errorExit(err)
+					return errorExit(err)
 				}
 			} else {
 				f, err := os.Open(progFile)
 				if err != nil {
-					errorExit(err)
+					return errorExit(err)
 				}
 				err = fileReader.AddFile(progFile, f)
 				if err != nil {
 					_ = f.Close()
-					errorExit(err)
+					return errorExit(err)
 				}
 				_ = f.Close()
 			}
 		}
 	} else {
 		if len(args) < 1 {
-			errorExitf(shortUsage)
+			return errorExitf(shortUsage)
 		}
 		err := fileReader.AddFile("<cmdline>", strings.NewReader(args[0]))
 		if err != nil {
-			errorExit(err)
+			return errorExit(err)
 		}
 		args = args[1:]
 	}
@@ -273,9 +273,9 @@ argsLoop:
 			fmt.Fprintf(os.Stderr, "%s:%d:%d: %s\n",
 				name, line, err.Position.Column, err.Message)
 			showSourceLine(fileReader.Source(), err.Position)
-			os.Exit(1)
+			return err
 		}
-		errorExitf("%s", err)
+		return errorExitf("%s", err)
 	}
 
 	coverage := cover.New(coverMode, coverAppend, fileReader)
@@ -292,7 +292,7 @@ argsLoop:
 		// re-compile it
 		prog.Compiled, err = compiler.Compile(&prog.ResolvedProgram)
 		if err != nil {
-			errorExitf("%s", err)
+			return errorExitf("%s", err)
 		}
 	}
 
@@ -303,17 +303,17 @@ argsLoop:
 	if debugAsm {
 		err := prog.Disassemble(os.Stdout)
 		if err != nil {
-			errorExitf("could not disassemble program: %v", err)
+			return errorExitf("could not disassemble program: %v", err)
 		}
 	}
 
 	if debug || debugAsm || debugTypes {
-		os.Exit(0)
+		return nil
 	}
 
 	if header {
 		if inputMode == "" {
-			errorExitf("-H only allowed together with -i")
+			return errorExitf("-H only allowed together with -i")
 		}
 		inputMode += " header"
 	}
@@ -340,7 +340,7 @@ argsLoop:
 	for _, v := range vars {
 		equals := strings.IndexByte(v, '=')
 		if equals < 0 {
-			errorExitf("-v flag must be in format name=value")
+			return errorExitf("-v flag must be in format name=value")
 		}
 		name, value := v[:equals], v[equals+1:]
 		// Oddly, -v must interpret escapes (issue #129)
@@ -354,10 +354,10 @@ argsLoop:
 	if cpuProfile != "" {
 		f, err := os.Create(cpuProfile)
 		if err != nil {
-			errorExitf("could not create CPU profile: %v", err)
+			return errorExitf("could not create CPU profile: %v", err)
 		}
 		if err := pprof.StartCPUProfile(f); err != nil {
-			errorExitf("could not start CPU profile: %v", err)
+			return errorExitf("could not start CPU profile: %v", err)
 		}
 	}
 
@@ -366,13 +366,13 @@ argsLoop:
 	status, err := interpreter.Execute(config)
 
 	if err != nil {
-		errorExit(err)
+		return errorExit(err)
 	}
 
 	if coverProfile != "" {
 		err := coverage.WriteProfile(coverProfile, interpreter.Array(cover.ArrayName))
 		if err != nil {
-			errorExitf("unable to write coverage profile: %v", err)
+			return errorExitf("unable to write coverage profile: %v", err)
 		}
 	}
 
@@ -382,16 +382,19 @@ argsLoop:
 	if memProfile != "" {
 		f, err := os.Create(memProfile)
 		if err != nil {
-			errorExitf("could not create memory profile: %v", err)
+			return errorExitf("could not create memory profile: %v", err)
 		}
 		runtime.GC() // get up-to-date statistics
 		if err := pprof.WriteHeapProfile(f); err != nil {
-			errorExitf("could not write memory profile: %v", err)
+			return errorExitf("could not write memory profile: %v", err)
 		}
 		_ = f.Close()
 	}
 
-	os.Exit(status)
+	if status != 0 {
+		return fmt.Errorf("awk exit status %d", status)
+	}
+	return nil
 }
 
 func coverModeFromString(mode string) cover.Mode {
@@ -401,7 +404,7 @@ func coverModeFromString(mode string) cover.Mode {
 	case "count":
 		return cover.ModeCount
 	default:
-		errorExitf("-covermode can only be one of: set, count")
+		fmt.Println("-covermode can only be one of: set, count")
 		return cover.ModeUnspecified
 	}
 }
@@ -419,17 +422,16 @@ func showSourceLine(src []byte, pos lexer.Position) {
 	fmt.Fprintln(os.Stderr, strings.Repeat(" ", runeColumn)+strings.Repeat("   ", numTabs)+"^")
 }
 
-func errorExit(err error) {
+func errorExit(err error) error {
 	pathErr, ok := err.(*os.PathError)
 	if ok && os.IsNotExist(err) {
-		errorExitf("file %q not found", pathErr.Path)
+		return errorExitf("file %q not found", pathErr.Path)
 	}
-	errorExitf("%s", err)
+	return errorExitf("%s", err)
 }
 
-func errorExitf(format string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, format+"\n", args...)
-	os.Exit(1)
+func errorExitf(format string, args ...interface{}) error {
+	return fmt.Errorf(format+"\n", args...)
 }
 
 func expandWildcardsOnWindows(args []string) []string {
